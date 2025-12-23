@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  # 1. PostgreSQL Database Service
+  postgres-dw:
+    image: postgres:16
+    container_name: nan-stop-postgres-dw
+    hostname: postgres-dw
+    networks:
+      - dw-network
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: P@ssw0rd
+      POSTGRES_DB: retail_company
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. pgAdmin Service
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: nan-stop-pgadmin
+    networks:
+      - dw-network
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: P@ssw0rd
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres-dw
+
+  # 3. Metabase Service
+  metabase:
+    image: metabase/metabase
+    container_name: nan-stop-metabase
+    networks:
+      - dw-network
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres-dw
+
+  # 4. NiFi Service (อัปเดตตามคำสั่งใหม่)
+  nifi:
+    image: apache/nifi:latest
+    container_name: nifi # <-- เปลี่ยนชื่อตามคำสั่ง
+    networks:
+      - dw-network
+    ports:
+      - "8443:8443"
+    environment:
+      # --- อัปเดต User/Password ตามคำสั่ง ---
+      - SINGLE_USER_CREDENTIALS_USERNAME=admin
+      - SINGLE_USER_CREDENTIALS_PASSWORD=KMITL06026212
+    depends_on:
+      - postgres-dw
+    volumes:
+      # ยังคงส่วนนี้ไว้เพื่อบันทึก Flow ที่ import เข้าไป
+      - nifi_conf:/opt/nifi/nifi-current/conf
+
+# กำหนด Network และ Volume
+networks:
+  dw-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  nifi_conf: {}
